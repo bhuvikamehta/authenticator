@@ -1,6 +1,5 @@
 import 'package:auth_app/Pages/AuthPage.dart';
 import 'package:auth_app/Pages/HomePage.dart';
-import 'package:auth_app/Theme/theme_data.dart';
 import 'package:auth_app/Theme/theme_provider.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
@@ -25,12 +24,12 @@ class App extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final _themeProvider = Provider.of<ThemeProvider>(context);
+    final themeProvider = Provider.of<ThemeProvider>(context);
     
     return MaterialApp(
       debugShowCheckedModeBanner: false,  // remove debug banner
       title: 'Auth App',
-      theme: _themeProvider.themeData,
+      theme: themeProvider.themeData,
       home: StreamBuilder(stream: FirebaseAuth.instance.authStateChanges(), 
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting){

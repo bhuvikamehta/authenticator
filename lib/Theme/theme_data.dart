@@ -7,7 +7,6 @@ final ThemeData lightTheme = ThemeData(
   colorScheme: const ColorScheme.light(
     primary: Color(0xFF007AFF),
     onPrimary: Colors.white,
-    background: Color(0xFFFFFFFF),
     surface: Color(0xFFF7F8FA),
     onSurface: Color(0xFF1C1C1E),
     secondary: Color(0xFF6E6E73),
@@ -54,7 +53,6 @@ final ThemeData darkTheme = ThemeData(
   colorScheme: const ColorScheme.dark(
     primary: Color(0xFF00D0A8),
     onPrimary: Color(0xFF000000),
-    background: Color(0xFF000000),
     surface: Color(0xFF121212),
     onSurface: Color(0xFFFFFFFF),
     secondary: Color(0xFFA0AEC0),
