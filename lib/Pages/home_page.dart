@@ -1,4 +1,6 @@
 import 'package:animated_toggle_switch/animated_toggle_switch.dart';
+import 'package:auth_app/Components/Services/image_utils.dart';
+import 'package:auth_app/Components/qr_scan_page.dart';
 import 'package:auth_app/Components/auth_card.dart';
 import 'package:auth_app/Models/account.dart';
 import 'package:auth_app/Theme/theme_provider.dart';
@@ -7,10 +9,9 @@ import 'package:flutter/material.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:provider/provider.dart';
 
-
-// Stateful with the data of accounts logged in  .. 
+// Stateful with the data of accounts logged in  ..
 // lsit of accounts (mutable)
-// model will be inside the user 
+// model will be inside the user
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
 
@@ -18,16 +19,17 @@ class HomePage extends StatefulWidget {
   State<HomePage> createState() => _HomePageState();
 }
 
-
 class _HomePageState extends State<HomePage> {
-
+  // State variable to persist TOTP cards
+  final List<TOTPCard> totpCards = [];
+  
   @override
   Widget build(BuildContext context) {
     ThemeProvider themeProvider = Provider.of<ThemeProvider>(context);
     final theme = Theme.of(context);
     final elevatedButtonStyle = theme.elevatedButtonTheme.style;
-    final buttonBackgroundColor = elevatedButtonStyle?.backgroundColor?.resolve({}) ?? theme.primaryColor;
-    
+    final buttonBackgroundColor =
+        elevatedButtonStyle?.backgroundColor?.resolve({}) ?? theme.primaryColor;
     return Scaffold(
       appBar: PreferredSize(
         preferredSize: const Size.fromHeight(60),
@@ -55,7 +57,12 @@ class _HomePageState extends State<HomePage> {
           actions: [
             Container(
               margin: const EdgeInsets.only(right: 0),
-              padding: const EdgeInsets.only(left: 20, right: 12, top: 8, bottom: 8),
+              padding: const EdgeInsets.only(
+                left: 20,
+                right: 12,
+                top: 8,
+                bottom: 8,
+              ),
               decoration: BoxDecoration(
                 color: buttonBackgroundColor,
                 borderRadius: const BorderRadius.only(
@@ -96,7 +103,9 @@ class _HomePageState extends State<HomePage> {
                           key: ValueKey(value),
                           decoration: BoxDecoration(
                             shape: BoxShape.rectangle,
-                            borderRadius: const BorderRadius.all(Radius.circular(8)),
+                            borderRadius: const BorderRadius.all(
+                              Radius.circular(8),
+                            ),
                             boxShadow: [
                               BoxShadow(
                                 color: Colors.black.withOpacity(0.3),
@@ -106,17 +115,17 @@ class _HomePageState extends State<HomePage> {
                               ),
                             ],
                           ),
-                          child: value 
-                            ? const Icon(
-                                Icons.nightlight_round,
-                                color: Colors.yellowAccent,
-                                size: 22,
-                              )
-                            : const Icon(
-                                Icons.wb_sunny,
-                                color: Colors.amber,
-                                size: 22,
-                              ),
+                          child: value
+                              ? const Icon(
+                                  Icons.nightlight_round,
+                                  color: Colors.yellowAccent,
+                                  size: 22,
+                                )
+                              : const Icon(
+                                  Icons.wb_sunny,
+                                  color: Colors.amber,
+                                  size: 22,
+                                ),
                         ),
                       ),
                       textBuilder: (value) => const SizedBox.shrink(),
@@ -124,30 +133,22 @@ class _HomePageState extends State<HomePage> {
                   ),
                   const SizedBox(width: 12),
                   GestureDetector(
-                    child: const Icon(
-                      Icons.exit_to_app,
-                      size: 25,
-                    ),
+                    child: const Icon(Icons.exit_to_app, size: 25),
                     onTap: () async {
                       try {
                         final GoogleSignIn googleSignIn = GoogleSignIn();
                         // firebase sign out
                         await FirebaseAuth.instance.signOut();
-                        // google sign out -> next time ask for account again 
+                        // google sign out -> next time ask for account again
                         await googleSignIn.disconnect();
-                      }
-                      catch (e) {
+                      } catch (e) {
                         // shows the snack bar for them error message
                         final messenger = ScaffoldMessenger.of(context);
                         messenger.showSnackBar(
-                          SnackBar(
-                            content: Text(
-                              e.toString()
-                            ),
-                          )
+                          SnackBar(content: Text(e.toString())),
                         );
                       }
-                    }
+                    },
                   ),
                 ],
               ),
@@ -188,29 +189,100 @@ class _HomePageState extends State<HomePage> {
         child: Column(
           children: [
             const SizedBox(height: 20),
-            AuthCard(
-              totpCard: TOTPCard(
-                id: '1',
-                accountName: 'Test your strength',
-                issuer: 'Running Challenge',
-                secret: 'JBSWY3DPEHPK3PXP', // Example secret
-                digits: 6,
-                period: 30,
-                createdAt: DateTime.now(),
-              ),
+            ListView.builder(
+              itemCount: totpCards.length, // Added itemCount
+              itemBuilder: (context, index) {
+                return AuthCard(totpCard: totpCards[index]);
+              },
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
             ),
+            const SizedBox(height: 80), // To provide space for FAB
           ],
         ),
       ),
       floatingActionButton: FloatingActionButton(
-        onPressed: () {
-          // TODO: Add new account action
-        },
         backgroundColor: themeProvider.themeData?.primaryColor,
-        child: const Icon(
-          Icons.add,
-          size: 30,
-        ),
+        child: const Icon(Icons.add, size: 30),
+        onPressed: () async {
+          // Navigate to QR scanner
+          final result = await Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => const QRScanPage()),
+          );
+
+          if (result != null && result is String && result.isNotEmpty) {
+            if (!mounted) return;
+            
+            // Automatically add the account if it's a valid TOTP URI
+            if (result.startsWith('otpauth://')) {
+              try {
+                // Parse the TOTP URI and create a TOTPCard
+                final totpCard = await parseTOTPFromQR(result);
+                setState(() {
+                  totpCards.add(totpCard);
+                });
+                
+                if (!mounted) return;
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Row(
+                      children: [
+                        const Icon(Icons.check_circle, color: Colors.white),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Text(
+                            'Added account: ${totpCard.accountName}',
+                            style: const TextStyle(fontSize: 16),
+                          ),
+                        ),
+                      ],
+                    ),
+                    backgroundColor: Colors.green,
+                    duration: const Duration(seconds: 3),
+                    behavior: SnackBarBehavior.floating,
+                  ),
+                );
+              } catch (e) {
+                if (!mounted) return;
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Row(
+                      children: [
+                        const Icon(Icons.error_outline, color: Colors.white),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Text('Error: $e'),
+                        ),
+                      ],
+                    ),
+                    backgroundColor: Colors.red,
+                    duration: const Duration(seconds: 4),
+                    behavior: SnackBarBehavior.floating,
+                  ),
+                );
+              }
+            } else {
+              // Show error for invalid TOTP format
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Row(
+                    children: [
+                      Icon(Icons.warning, color: Colors.white),
+                      SizedBox(width: 12),
+                      Expanded(
+                        child: Text('Invalid TOTP QR code format'),
+                      ),
+                    ],
+                  ),
+                  backgroundColor: Colors.orange,
+                  duration: Duration(seconds: 3),
+                  behavior: SnackBarBehavior.floating,
+                ),
+              );
+            }
+          }
+        },
       ),
     );
   }

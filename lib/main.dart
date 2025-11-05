@@ -1,8 +1,5 @@
-import 'package:auth_app/Pages/auth_page.dart';
 import 'package:auth_app/Pages/home_page.dart';
-import 'package:auth_app/Pages/totp_demo_page.dart';
 import 'package:auth_app/Theme/theme_provider.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:provider/provider.dart';
