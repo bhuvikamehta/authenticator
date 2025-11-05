@@ -48,3 +48,5 @@ app.*.map.json
 
 # the google services json file
 android/app/google-services.json
+
+build/

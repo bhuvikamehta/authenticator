@@ -1,0 +1,3 @@
+-dontwarn javax.imageio.**
+-dontwarn com.github.jaiimageio.**
+-keep class com.github.jaiimageio.** { *; }
