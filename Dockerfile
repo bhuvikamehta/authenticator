@@ -66,4 +66,4 @@ EXPOSE 8080
 
 # ----------- Default Command -----------
 # Starts Flutter web server by default; change to /bin/bash for dev shell
-CMD ["flutter", "run", "-d", "web-server", "--web-port=8080", "--web-hostname=0.0.0.0"]
+CMD ["flutter", "run", "-d", "web-server", "--web-port=9000", "--web-hostname=0.0.0.0"]
