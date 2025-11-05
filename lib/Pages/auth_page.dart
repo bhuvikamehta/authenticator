@@ -186,13 +186,7 @@ class _AuthPageState extends State<AuthPage> {
                   child: ElevatedButton(
                     onPressed: () {
                       // Handle sign up/sign in logic
-                      if (_isSignUp) {
-                        // Sign up logic
-                        print("Sign Up with: ${_emailController.text}");
-                      } else {
-                        // Sign in logic
-                        print("Sign In with: ${_emailController.text}");
-                      }
+                      
                     },
                     style: ElevatedButton.styleFrom(
                       backgroundColor: const Color(0xFF0EA5E9),

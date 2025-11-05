@@ -166,14 +166,14 @@ class _AuthCardState extends State<AuthCard> with SingleTickerProviderStateMixin
           borderRadius: BorderRadius.circular(30),
           boxShadow: [
             BoxShadow(
-              color: Colors.grey.withOpacity(0.3),
+              color: Colors.grey.withValues(alpha: 0.3),
               blurRadius: 15,
               spreadRadius: 2,
               offset: const Offset(0, 5),
             ),
             // Glow effect with card's background color
             BoxShadow(
-              color: buttonBackgroundColor.withOpacity(0.1),
+              color: buttonBackgroundColor.withValues(alpha: 0.1),
               blurRadius: 30,
               spreadRadius: 8,
               offset: const Offset(0, 0),
@@ -203,7 +203,7 @@ class _AuthCardState extends State<AuthCard> with SingleTickerProviderStateMixin
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                     decoration: BoxDecoration(
-                      color: buttonForegroundColor.withOpacity(0.15),
+                      color: buttonForegroundColor.withValues(alpha: 0.15),
                       borderRadius: BorderRadius.circular(15),
                     ),
                     child: Text(
@@ -223,7 +223,7 @@ class _AuthCardState extends State<AuthCard> with SingleTickerProviderStateMixin
               Text(
                 widget.totpCard.accountName,
                 style: TextStyle(
-                  color: buttonForegroundColor.withOpacity(0.7),
+                  color: buttonForegroundColor.withValues(alpha: 0.7),
                   fontSize: 16,
                 ),
               ),
@@ -241,7 +241,7 @@ class _AuthCardState extends State<AuthCard> with SingleTickerProviderStateMixin
                         shape: BoxShape.circle,
                         color: i == 0 
                             ? buttonForegroundColor 
-                            : buttonForegroundColor.withOpacity(0.3),
+                            : buttonForegroundColor.withValues(alpha: 0.3),
                       ),
                     ),
                 ],
@@ -305,12 +305,12 @@ class _AuthCardState extends State<AuthCard> with SingleTickerProviderStateMixin
                             width: 40,
                             height: 40,
                             decoration: BoxDecoration(
-                              color: onSurfaceColor.withOpacity(0.1),
+                              color: onSurfaceColor.withValues(alpha: 0.1),
                               shape: BoxShape.circle,
                             ),
                             child: Icon(
                               _isCodeVisible ? Icons.visibility : Icons.visibility_off,
-                              color: onSurfaceColor.withOpacity(0.7),
+                              color: onSurfaceColor.withValues(alpha: 0.7),
                               size: 20,
                             ),
                           ),

@@ -50,8 +50,8 @@ class MyTextfield extends StatelessWidget {
             boxShadow: [
               BoxShadow(
                 color: isDark 
-                    ? Colors.black.withOpacity(0.3)
-                    : Colors.grey.withOpacity(0.15),
+                    ? Colors.black.withValues(alpha: 0.3)
+                    : Colors.grey.withValues(alpha: 0.15),
                 blurRadius: 8,
                 offset: const Offset(0, 2),
               ),

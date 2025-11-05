@@ -4,8 +4,6 @@ import 'package:mobile_scanner/mobile_scanner.dart';
 
 
 Future<String?> getStringFromQR(File imageFile) async {
-  print('========== SCANNING QR CODE ==========');
-  print('Image path: ${imageFile.path}');
   
   try {
     final MobileScannerController controller = MobileScannerController();
@@ -16,21 +14,17 @@ Future<String?> getStringFromQR(File imageFile) async {
     await controller.dispose();
     
     if (barcodeCapture == null || barcodeCapture.barcodes.isEmpty) {
-      print('No QR code detected in image');
       return null;
     }
     
     final String? qrData = barcodeCapture.barcodes.first.rawValue;
     
     if (qrData == null || qrData.isEmpty) {
-      print('QR code detected but no data found');
       return null;
     }
     
-    print('QR code found successfully!');
     return qrData;
   } catch (e) {
-    print('Error during QR scanning: $e');
     return null;
   }
 }
@@ -39,11 +33,6 @@ Future<TOTPCard> getCardFromQR(String? qrData) async{
   if (qrData == null || qrData.isEmpty) {
     throw Exception('No QR code data provided');
   }
-  
-  // Print the raw Q  R data received
-  print('========== QR CODE DATA ==========');
-  print(qrData);
-  print('==================================');
   
   // Parse the QR data to extract TOTPCard information
   // otpauth://totp/ACME%20Co:john.doe@email.com?secret=HXDMVJECJJWSRB3HWIZR4IFUGFTMXBOZ&issuer=ACME%20Co&algorithm=SHA1&digits=6&period=30
@@ -65,7 +54,7 @@ Future<TOTPCard> getCardFromQR(String? qrData) async{
   String secret = params['secret'] ?? '';
   String id = DateTime.now().millisecondsSinceEpoch.toString();
   DateTime createdAt = DateTime.now();    
-  TOTPCard totpCard = new TOTPCard(
+  TOTPCard totpCard = TOTPCard(
     id: id,
     accountName: accountName,
     issuer: issuer,
@@ -91,7 +80,6 @@ Future<TOTPCard?> scanQRFromImage(File imageFile) async {
     TOTPCard totpCard = await getCardFromQR(qrData);
     return totpCard;
   } catch (e) {
-    print('Error in scanQRFromImage: $e');
     rethrow;
   }
 }
