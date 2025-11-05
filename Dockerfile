@@ -62,7 +62,7 @@ RUN flutter pub get
 # RUN flutter build apk --debug
 
 # ----------- Expose Port for Flutter Web -----------
-EXPOSE 8080
+EXPOSE 9000
 
 # ----------- Default Command -----------
 # Starts Flutter web server by default; change to /bin/bash for dev shell
