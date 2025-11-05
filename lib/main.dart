@@ -1,5 +1,6 @@
-import 'package:auth_app/Pages/AuthPage.dart';
-import 'package:auth_app/Pages/HomePage.dart';
+import 'package:auth_app/Pages/auth_page.dart';
+import 'package:auth_app/Pages/home_page.dart';
+import 'package:auth_app/Pages/totp_demo_page.dart';
 import 'package:auth_app/Theme/theme_provider.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
@@ -30,19 +31,20 @@ class App extends StatelessWidget {
       debugShowCheckedModeBanner: false,  // remove debug banner
       title: 'Auth App',
       theme: themeProvider.themeData,
-      home: StreamBuilder(stream: FirebaseAuth.instance.authStateChanges(), 
-      builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting){
-          return const Center(child: CircularProgressIndicator());
-        }
-        if (snapshot.hasError){
-          return const Center(child: Text("Something Went Wrong !!!" ));
-        }
-        if(snapshot.hasData && snapshot.data != null){
-          return const HomePage();
-        }
-        return const AuthPage();
-      },)
+      home: const HomePage(),
+      // home: StreamBuilder(stream: FirebaseAuth.instance.authStateChanges(), 
+      // builder: (context, snapshot) {
+      //   if (snapshot.connectionState == ConnectionState.waiting){
+      //     return const Center(child: CircularProgressIndicator());
+      //   }
+      //   if (snapshot.hasError){
+      //     return const Center(child: Text("Something Went Wrong !!!" ));
+      //   }
+      //   if(snapshot.hasData && snapshot.data != null){
+      //     return const HomePage();
+      //   }
+      //   return const AuthPage();
+      // },)
     );
   }
 }

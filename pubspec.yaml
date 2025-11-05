@@ -41,6 +41,9 @@ dependencies:
   provider: ^6.1.5+1
   google_sign_in: ^6.1.4
   animated_toggle_switch: ^0.8.5
+  auth_totp: ^1.0.1
+  uri: ^1.0.0
+  crypto: ^3.0.3
 
 dev_dependencies:
   flutter_test:
