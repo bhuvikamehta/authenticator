@@ -192,7 +192,14 @@ class _HomePageState extends State<HomePage> {
             ListView.builder(
               itemCount: totpCards.length, // Added itemCount
               itemBuilder: (context, index) {
-                return AuthCard(totpCard: totpCards[index]);
+                return AuthCard(
+                  totpCard: totpCards[index],
+                  onDelete: () {
+                    setState(() {
+                      totpCards.removeAt(index);
+                    });
+                  },
+                );
               },
               shrinkWrap: true,
               physics: const NeverScrollableScrollPhysics(),

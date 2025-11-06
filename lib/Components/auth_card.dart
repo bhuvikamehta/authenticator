@@ -1,27 +1,32 @@
 import 'dart:async';
 import 'dart:typed_data';
+import 'package:auth_app/Components/animated_delete_button.dart';
+import 'package:auth_app/services/totp_storage_service.dart';
 import 'package:flutter/material.dart';
 import 'package:auth_app/Models/account.dart';
 import 'package:crypto/crypto.dart';
 
 class AuthCard extends StatefulWidget {
   final TOTPCard totpCard;
-  
-  const AuthCard({
-    super.key,
-    required this.totpCard,
-  });
+  final VoidCallback? onDelete;
+
+  const AuthCard({super.key, required this.totpCard, this.onDelete});
 
   @override
   State<AuthCard> createState() => _AuthCardState();
 }
 
-class _AuthCardState extends State<AuthCard> with SingleTickerProviderStateMixin {
+class _AuthCardState extends State<AuthCard>
+    with TickerProviderStateMixin {
   late Timer _timer;
   late String _currentCode;
   late int _secondsRemaining;
   late AnimationController _animationController;
+  late AnimationController _deleteAnimationController;
+  late Animation<double> _fadeAnimation;
+  late Animation<Offset> _slideAnimation;
   bool _isCodeVisible = false; // Hidden by default
+  bool _isDeleting = false;
 
   @override
   void initState() {
@@ -33,6 +38,29 @@ class _AuthCardState extends State<AuthCard> with SingleTickerProviderStateMixin
     _animationController.addListener(() {
       setState(() {}); // Rebuild when animation updates
     });
+    
+    _deleteAnimationController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 600),
+    );
+    
+    _fadeAnimation = Tween<double>(begin: 1.0, end: 0.0).animate(
+      CurvedAnimation(
+        parent: _deleteAnimationController,
+        curve: const Interval(0.0, 1.0, curve: Curves.easeOut),
+      ),
+    );
+    
+    _slideAnimation = Tween<Offset>(
+      begin: Offset.zero,
+      end: const Offset(-1.5, 0),
+    ).animate(
+      CurvedAnimation(
+        parent: _deleteAnimationController,
+        curve: const Interval(0.0, 1.0, curve: Curves.easeInOut),
+      ),
+    );
+    
     _updateCode();
     _startSmoothAnimation();
     _startTimer();
@@ -40,22 +68,29 @@ class _AuthCardState extends State<AuthCard> with SingleTickerProviderStateMixin
 
   void _updateCode() {
     _currentCode = _generateTOTP();
-    
-    final secondsPassed = (DateTime.now().millisecondsSinceEpoch ~/ 1000) % widget.totpCard.period;
+
+    final secondsPassed =
+        (DateTime.now().millisecondsSinceEpoch ~/ 1000) %
+        widget.totpCard.period;
     _secondsRemaining = widget.totpCard.period - secondsPassed;
   }
 
   void _startSmoothAnimation() {
     _animationController.stop();
     _animationController.reset();
-    
-    final secondsPassed = (DateTime.now().millisecondsSinceEpoch ~/ 1000) % widget.totpCard.period;
+
+    final secondsPassed =
+        (DateTime.now().millisecondsSinceEpoch ~/ 1000) %
+        widget.totpCard.period;
     final millisWithinSecond = DateTime.now().millisecondsSinceEpoch % 1000;
-    final totalProgress = (secondsPassed * 1000 + millisWithinSecond) / (widget.totpCard.period * 1000);
-    
+    final totalProgress =
+        (secondsPassed * 1000 + millisWithinSecond) /
+        (widget.totpCard.period * 1000);
+
     _animationController.value = totalProgress;
-    final remainingDuration = (widget.totpCard.period * 1000 * (1 - totalProgress)).round();
-    
+    final remainingDuration =
+        (widget.totpCard.period * 1000 * (1 - totalProgress)).round();
+
     _animationController.animateTo(
       1.0,
       duration: Duration(milliseconds: remainingDuration),
@@ -66,22 +101,23 @@ class _AuthCardState extends State<AuthCard> with SingleTickerProviderStateMixin
   String _generateTOTP() {
     final time = DateTime.now().millisecondsSinceEpoch ~/ 1000;
     final counter = time ~/ widget.totpCard.period;
-    
+
     // Decode base32 secret
     final key = _base32Decode(widget.totpCard.secret);
-    
+
     // Generate HMAC
     final counterBytes = _intToBytes(counter);
     final hmac = Hmac(sha1, key);
     final digest = hmac.convert(counterBytes);
-    
+
     // Dynamic truncation
     final offset = digest.bytes[digest.bytes.length - 1] & 0x0f;
-    final binary = ((digest.bytes[offset] & 0x7f) << 24) |
+    final binary =
+        ((digest.bytes[offset] & 0x7f) << 24) |
         ((digest.bytes[offset + 1] & 0xff) << 16) |
         ((digest.bytes[offset + 2] & 0xff) << 8) |
         (digest.bytes[offset + 3] & 0xff);
-    
+
     final code = binary % _pow10(widget.totpCard.digits);
     return code.toString().padLeft(widget.totpCard.digits, '0');
   }
@@ -106,25 +142,25 @@ class _AuthCardState extends State<AuthCard> with SingleTickerProviderStateMixin
   Uint8List _base32Decode(String encoded) {
     // Remove padding and convert to uppercase
     encoded = encoded.toUpperCase().replaceAll('=', '');
-    
+
     const base32Chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567';
     final output = <int>[];
     int buffer = 0;
     int bitsLeft = 0;
-    
+
     for (int i = 0; i < encoded.length; i++) {
       final value = base32Chars.indexOf(encoded[i]);
       if (value < 0) continue;
-      
+
       buffer = (buffer << 5) | value;
       bitsLeft += 5;
-      
+
       if (bitsLeft >= 8) {
         output.add((buffer >> (bitsLeft - 8)) & 0xff);
         bitsLeft -= 8;
       }
     }
-    
+
     return Uint8List.fromList(output);
   }
 
@@ -144,6 +180,7 @@ class _AuthCardState extends State<AuthCard> with SingleTickerProviderStateMixin
   void dispose() {
     _timer.cancel();
     _animationController.dispose();
+    _deleteAnimationController.dispose();
     super.dispose();
   }
 
@@ -152,104 +189,105 @@ class _AuthCardState extends State<AuthCard> with SingleTickerProviderStateMixin
     // Use theme colors
     final theme = Theme.of(context);
     final elevatedButtonStyle = theme.elevatedButtonTheme.style;
-    final buttonBackgroundColor = elevatedButtonStyle?.backgroundColor?.resolve({}) ?? theme.primaryColor;
-    final buttonForegroundColor = elevatedButtonStyle?.foregroundColor?.resolve({}) ?? Colors.white;
+    final buttonBackgroundColor =
+        elevatedButtonStyle?.backgroundColor?.resolve({}) ?? theme.primaryColor;
+    final buttonForegroundColor =
+        elevatedButtonStyle?.foregroundColor?.resolve({}) ?? Colors.white;
     final surfaceColor = theme.colorScheme.surface;
     final onSurfaceColor = theme.colorScheme.onSurface;
     final borderColor = onSurfaceColor;
-    
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-      child: Container(
-        decoration: BoxDecoration(
-          color: buttonBackgroundColor,
-          borderRadius: BorderRadius.circular(30),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.grey.withValues(alpha: 0.3),
-              blurRadius: 15,
-              spreadRadius: 2,
-              offset: const Offset(0, 5),
-            ),
-            // Glow effect with card's background color
-            BoxShadow(
-              color: buttonBackgroundColor.withValues(alpha: 0.1),
-              blurRadius: 30,
-              spreadRadius: 8,
-              offset: const Offset(0, 0),
-            ),
-          ],
-        ),
+
+    return SlideTransition(
+      position: _slideAnimation,
+      child: FadeTransition(
+        opacity: _fadeAnimation,
         child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              // Header with issuer and level indicator
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Expanded(
-                    child: Text(
-                      widget.totpCard.issuer,
-                      style: TextStyle(
-                        color: buttonForegroundColor,
-                        fontSize: 24,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                    decoration: BoxDecoration(
-                      color: buttonForegroundColor.withValues(alpha: 0.15),
-                      borderRadius: BorderRadius.circular(15),
-                    ),
-                    child: Text(
-                      '+${widget.totpCard.digits} Digit',
-                      style: TextStyle(
-                        color: buttonForegroundColor,
-                        fontSize: 12,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 8),
-              
-              // Account name
-              Text(
-                widget.totpCard.accountName,
-                style: TextStyle(
-                  color: buttonForegroundColor.withValues(alpha: 0.7),
-                  fontSize: 16,
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+          child: Container(
+            decoration: BoxDecoration(
+              color: buttonBackgroundColor,
+              borderRadius: BorderRadius.circular(30),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.grey.withValues(alpha: 0.3),
+                  blurRadius: 15,
+                  spreadRadius: 2,
+                  offset: const Offset(0, 5),
                 ),
-              ),
-              const SizedBox(height: 24),
-              
-              // Progress indicator with dots
-              Row(
+                // Glow effect with card's background color
+                BoxShadow(
+                  color: buttonBackgroundColor.withValues(alpha: 0.1),
+                  blurRadius: 30,
+                  spreadRadius: 8,
+                  offset: const Offset(0, 0),
+                ),
+              ],
+            ),
+            child: Padding(
+              padding: const EdgeInsets.all(24),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
                 children: [
-                  for (int i = 0; i < 4; i++)
-                    Container(
-                      width: 8,
-                      height: 8,
-                      margin: const EdgeInsets.only(right: 8),
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        color: i == 0 
-                            ? buttonForegroundColor 
-                            : buttonForegroundColor.withValues(alpha: 0.3),
+                  // Header with issuer and level indicator
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Expanded(
+                        child: Text(
+                          widget.totpCard.issuer,
+                          style: TextStyle(
+                            color: buttonForegroundColor,
+                            fontSize: 24,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
                       ),
+                      ThemedDeleteButton(
+                        onPressed: () async {
+                          if (!_isDeleting) {
+                            setState(() {
+                              _isDeleting = true;
+                            });
+                            await _handleDelete(context, widget.totpCard.id);
+                          }
+                        },
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+
+                  // Account name
+                  Text(
+                    widget.totpCard.accountName,
+                    style: TextStyle(
+                      color: buttonForegroundColor.withValues(alpha: 0.7),
+                      fontSize: 16,
                     ),
-                ],
-              ),
-              const SizedBox(height: 16),
-              
-              // Code display with animated border
-              Stack(
+                  ),
+                  const SizedBox(height: 24),
+
+                  // Progress indicator with dots
+                  Row(
+                    children: [
+                      for (int i = 0; i < 4; i++)
+                        Container(
+                          width: 8,
+                          height: 8,
+                          margin: const EdgeInsets.only(right: 8),
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: i == 0
+                                ? buttonForegroundColor
+                                : buttonForegroundColor.withValues(alpha: 0.3),
+                          ),
+                        ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+
+                  // Code display with animated border
+                  Stack(
                 children: [
                   // Background container
                   Container(
@@ -259,18 +297,21 @@ class _AuthCardState extends State<AuthCard> with SingleTickerProviderStateMixin
                       borderRadius: BorderRadius.circular(35),
                     ),
                   ),
-                  
+
                   // Animated border that depletes
                   Positioned.fill(
                     child: CustomPaint(
                       painter: BorderProgressPainter(
-                        progress: 1 - _animationController.value, // Reverse so it depletes
+                        progress:
+                            1 -
+                            _animationController
+                                .value, // Reverse so it depletes
                         strokeWidth: 6,
                         color: borderColor,
                       ),
                     ),
                   ),
-                  
+
                   // Code and eye icon
                   Container(
                     height: 70,
@@ -309,7 +350,9 @@ class _AuthCardState extends State<AuthCard> with SingleTickerProviderStateMixin
                               shape: BoxShape.circle,
                             ),
                             child: Icon(
-                              _isCodeVisible ? Icons.visibility : Icons.visibility_off,
+                              _isCodeVisible
+                                  ? Icons.visibility
+                                  : Icons.visibility_off,
                               color: onSurfaceColor.withValues(alpha: 0.7),
                               size: 20,
                             ),
@@ -320,11 +363,31 @@ class _AuthCardState extends State<AuthCard> with SingleTickerProviderStateMixin
                   ),
                 ],
               ),
-            ],
+                ],
+              ),
+            ),
           ),
         ),
       ),
     );
+  }
+  
+  Future<void> _handleDelete(BuildContext context, String id) async {
+    // Start card disappear animation
+    await _deleteAnimationController.forward();
+    
+    // Remove from the storage
+    final storage = TotpStorageService();
+    await storage.deleteTotpCard(id);
+    
+    // Show success message
+    if (!context.mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Item deleted!')),
+    );
+    
+    // Notify parent to update UI
+    widget.onDelete?.call();
   }
 }
 
@@ -358,31 +421,31 @@ class BorderProgressPainter extends CustomPainter {
       size.width - strokeWidth,
       size.height - strokeWidth,
     );
-    
+
     // Adjust radius to match the container's border radius minus the stroke inset
     final radius = 35.0 - inset;
-    
+
     // Calculate the total perimeter of the rounded rectangle
     final width = rect.width;
     final height = rect.height;
-    
+
     // Approximate perimeter: 2 * (width + height) - 4 * radius + 2 * pi * radius
     final straightParts = 2 * (width + height) - 8 * radius;
     final curvedParts = 2 * 3.14159 * radius;
     final totalPerimeter = straightParts + curvedParts;
-    
+
     // Calculate how much of the perimeter to draw based on progress
     final drawLength = totalPerimeter * progress;
-    
+
     // Create path for the border
     final path = Path();
-    
+
     // Start from top-left, going clockwise
     final topLeft = Offset(rect.left + radius, rect.top);
     path.moveTo(topLeft.dx, topLeft.dy);
-    
+
     double currentLength = 0;
-    
+
     // Top edge
     final topEdgeLength = width - 2 * radius;
     if (currentLength + topEdgeLength <= drawLength) {
@@ -394,7 +457,7 @@ class BorderProgressPainter extends CustomPainter {
       canvas.drawPath(path, paint);
       return;
     }
-    
+
     // Top-right corner
     final cornerLength = (3.14159 * radius) / 2;
     if (currentLength + cornerLength <= drawLength) {
@@ -408,7 +471,10 @@ class BorderProgressPainter extends CustomPainter {
       final remaining = drawLength - currentLength;
       final sweepAngle = (remaining / cornerLength) * (3.14159 / 2);
       path.arcTo(
-        Rect.fromCircle(center: Offset(rect.right - radius, rect.top + radius), radius: radius),
+        Rect.fromCircle(
+          center: Offset(rect.right - radius, rect.top + radius),
+          radius: radius,
+        ),
         -3.14159 / 2,
         sweepAngle,
         false,
@@ -416,7 +482,7 @@ class BorderProgressPainter extends CustomPainter {
       canvas.drawPath(path, paint);
       return;
     }
-    
+
     // Right edge
     final rightEdgeLength = height - 2 * radius;
     if (currentLength + rightEdgeLength <= drawLength) {
@@ -428,7 +494,7 @@ class BorderProgressPainter extends CustomPainter {
       canvas.drawPath(path, paint);
       return;
     }
-    
+
     // Bottom-right corner
     if (currentLength + cornerLength <= drawLength) {
       path.arcToPoint(
@@ -441,7 +507,10 @@ class BorderProgressPainter extends CustomPainter {
       final remaining = drawLength - currentLength;
       final sweepAngle = (remaining / cornerLength) * (3.14159 / 2);
       path.arcTo(
-        Rect.fromCircle(center: Offset(rect.right - radius, rect.bottom - radius), radius: radius),
+        Rect.fromCircle(
+          center: Offset(rect.right - radius, rect.bottom - radius),
+          radius: radius,
+        ),
         0,
         sweepAngle,
         false,
@@ -449,7 +518,7 @@ class BorderProgressPainter extends CustomPainter {
       canvas.drawPath(path, paint);
       return;
     }
-    
+
     // Bottom edge
     if (currentLength + topEdgeLength <= drawLength) {
       path.lineTo(rect.left + radius, rect.bottom);
@@ -460,7 +529,7 @@ class BorderProgressPainter extends CustomPainter {
       canvas.drawPath(path, paint);
       return;
     }
-    
+
     // Bottom-left corner
     if (currentLength + cornerLength <= drawLength) {
       path.arcToPoint(
@@ -473,7 +542,10 @@ class BorderProgressPainter extends CustomPainter {
       final remaining = drawLength - currentLength;
       final sweepAngle = (remaining / cornerLength) * (3.14159 / 2);
       path.arcTo(
-        Rect.fromCircle(center: Offset(rect.left + radius, rect.bottom - radius), radius: radius),
+        Rect.fromCircle(
+          center: Offset(rect.left + radius, rect.bottom - radius),
+          radius: radius,
+        ),
         3.14159 / 2,
         sweepAngle,
         false,
@@ -481,7 +553,7 @@ class BorderProgressPainter extends CustomPainter {
       canvas.drawPath(path, paint);
       return;
     }
-    
+
     // Left edge
     if (currentLength + rightEdgeLength <= drawLength) {
       path.lineTo(rect.left, rect.top + radius);
@@ -492,7 +564,7 @@ class BorderProgressPainter extends CustomPainter {
       canvas.drawPath(path, paint);
       return;
     }
-    
+
     // Top-left corner (closing)
     if (currentLength + cornerLength <= drawLength) {
       path.arcToPoint(
@@ -504,13 +576,16 @@ class BorderProgressPainter extends CustomPainter {
       final remaining = drawLength - currentLength;
       final sweepAngle = (remaining / cornerLength) * (3.14159 / 2);
       path.arcTo(
-        Rect.fromCircle(center: Offset(rect.left + radius, rect.top + radius), radius: radius),
+        Rect.fromCircle(
+          center: Offset(rect.left + radius, rect.top + radius),
+          radius: radius,
+        ),
         3.14159,
         sweepAngle,
         false,
       );
     }
-    
+
     canvas.drawPath(path, paint);
   }
 
