@@ -3,6 +3,7 @@ import 'package:auth_app/Components/Services/image_utils.dart';
 import 'package:auth_app/Components/qr_scan_page.dart';
 import 'package:auth_app/Components/auth_card.dart';
 import 'package:auth_app/Models/account.dart';
+import 'package:auth_app/Pages/share_page.dart';
 import 'package:auth_app/Theme/theme_provider.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
@@ -166,6 +167,12 @@ class _HomePageState extends State<HomePage> {
               title: Text("Share"),
               onTap: () {
                 Navigator.pop(context);
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => SharePage(totpCards: totpCards),
+                  ),
+                );
               },
             ),
             ListTile(
