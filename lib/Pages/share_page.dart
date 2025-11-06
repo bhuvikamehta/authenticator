@@ -17,15 +17,8 @@ class _SharePageState extends State<SharePage> {
     return 'otpauth://totp/${Uri.encodeComponent(card.issuer)}:${Uri.encodeComponent(card.accountName)}?secret=${card.secret}&issuer=${Uri.encodeComponent(card.issuer)}&digits=${card.digits}&period=${card.period}';
   }
 
-  String _generateCombinedData() {
-    if (widget.totpCards.isEmpty) return '';
-    
-    final allLinks = widget.totpCards.map((card) {
-      return _generateTotpUri(card);
-    }).join('\n');
-    
-    return allLinks;
-  }
+  // Note: Most authenticator apps can only scan one TOTP URI per QR code
+  // So we'll show individual QR codes for each account
 
   void _copyToClipboard(String uri) {
     Clipboard.setData(ClipboardData(text: uri));
@@ -109,51 +102,23 @@ class _SharePageState extends State<SharePage> {
               padding: const EdgeInsets.all(16),
               child: Column(
                 children: [
-                  // Combined QR Code
-                  Card(
-                    elevation: 4,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(16),
+                  Text(
+                    'Scan QR Codes to Import Accounts',
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: buttonBackgroundColor,
                     ),
-                    child: Padding(
-                      padding: const EdgeInsets.all(20),
-                      child: Column(
-                        children: [
-                          const Text(
-                            'Scan to Import All Accounts',
-                            style: TextStyle(
-                              fontSize: 18,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                          const SizedBox(height: 16),
-                          QrImageView(
-                            data: _generateCombinedData(),
-                            version: QrVersions.auto,
-                            size: 280.0,
-                            backgroundColor: Colors.white,
-                          ),
-                          const SizedBox(height: 16),
-                          Text(
-                            '${widget.totpCards.length} account(s)',
-                            style: TextStyle(
-                              fontSize: 14,
-                              color: Colors.grey.shade600,
-                            ),
-                          ),
-                        ],
-                      ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    '${widget.totpCards.length} account(s) - Scan each QR code separately',
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: Colors.grey.shade600,
                     ),
                   ),
                   const SizedBox(height: 20),
-                  const Text(
-                    'Individual Accounts',
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  const SizedBox(height: 12),
                   ListView.builder(
                     shrinkWrap: true,
                     physics: const NeverScrollableScrollPhysics(),
@@ -164,94 +129,90 @@ class _SharePageState extends State<SharePage> {
                       final uri = _generateTotpUri(card);
 
                       return Card(
-                        margin: const EdgeInsets.only(bottom: 12),
-                        elevation: 2,
+                        margin: const EdgeInsets.only(bottom: 20),
+                        elevation: 3,
                         shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
+                          borderRadius: BorderRadius.circular(16),
                         ),
-                        child: ExpansionTile(
-                          leading: CircleAvatar(
-                            backgroundColor: buttonBackgroundColor,
-                            child: Icon(
-                              Icons.vpn_key,
-                              color: buttonForegroundColor,
-                              size: 20,
-                            ),
-                          ),
-                          title: Text(
-                            card.issuer,
-                            style: const TextStyle(
-                              fontWeight: FontWeight.bold,
-                              fontSize: 16,
-                            ),
-                          ),
-                          subtitle: Text(
-                            card.accountName,
-                            style: TextStyle(
-                              color: Colors.grey.shade600,
-                              fontSize: 14,
-                            ),
-                          ),
-                          children: [
-                            Padding(
-                              padding: const EdgeInsets.all(16),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
+                        child: Padding(
+                          padding: const EdgeInsets.all(16),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.center,
+                            children: [
+                              // Account header
+                              Row(
                                 children: [
-                                  const Text(
-                                    'TOTP Link:',
-                                    style: TextStyle(
-                                      fontWeight: FontWeight.bold,
-                                      fontSize: 14,
+                                  CircleAvatar(
+                                    backgroundColor: buttonBackgroundColor,
+                                    child: Icon(
+                                      Icons.vpn_key,
+                                      color: buttonForegroundColor,
+                                      size: 20,
                                     ),
                                   ),
-                                  const SizedBox(height: 8),
-                                  Container(
-                                    padding: const EdgeInsets.all(12),
-                                    decoration: BoxDecoration(
-                                      color: Colors.grey.shade100,
-                                      borderRadius: BorderRadius.circular(8),
-                                      border: Border.all(
-                                        color: Colors.grey.shade300,
-                                      ),
-                                    ),
-                                    child: SelectableText(
-                                      uri,
-                                      style: TextStyle(
-                                        fontSize: 12,
-                                        fontFamily: 'monospace',
-                                        color: Colors.grey.shade800,
-                                      ),
-                                    ),
-                                  ),
-                                  const SizedBox(height: 12),
-                                  Row(
-                                    mainAxisAlignment: MainAxisAlignment.end,
-                                    children: [
-                                      TextButton.icon(
-                                        onPressed: () => _copyToClipboard(uri),
-                                        icon: const Icon(Icons.copy, size: 18),
-                                        label: const Text('Copy'),
-                                        style: TextButton.styleFrom(
-                                          foregroundColor: buttonBackgroundColor,
+                                  const SizedBox(width: 12),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          card.issuer,
+                                          style: const TextStyle(
+                                            fontWeight: FontWeight.bold,
+                                            fontSize: 16,
+                                          ),
                                         ),
-                                      ),
-                                      const SizedBox(width: 8),
-                                      ElevatedButton.icon(
-                                        onPressed: () => _copyToClipboard(uri),
-                                        icon: const Icon(Icons.copy_all, size: 18),
-                                        label: const Text('Copy Link'),
-                                        style: ElevatedButton.styleFrom(
-                                          backgroundColor: buttonBackgroundColor,
-                                          foregroundColor: buttonForegroundColor,
+                                        Text(
+                                          card.accountName,
+                                          style: TextStyle(
+                                            color: Colors.grey.shade600,
+                                            fontSize: 14,
+                                          ),
                                         ),
-                                      ),
-                                    ],
+                                      ],
+                                    ),
                                   ),
                                 ],
                               ),
-                            ),
-                          ],
+                              const SizedBox(height: 16),
+                              // QR Code
+                              Container(
+                                padding: const EdgeInsets.all(16),
+                                decoration: BoxDecoration(
+                                  color: Colors.white,
+                                  borderRadius: BorderRadius.circular(12),
+                                  border: Border.all(
+                                    color: Colors.grey.shade300,
+                                    width: 2,
+                                  ),
+                                ),
+                                child: QrImageView(
+                                  data: uri,
+                                  version: QrVersions.auto,
+                                  size: 200.0,
+                                  backgroundColor: Colors.white,
+                                ),
+                              ),
+                              const SizedBox(height: 16),
+                              // Action buttons
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                                children: [
+                                  Expanded(
+                                    child: OutlinedButton.icon(
+                                      onPressed: () => _copyToClipboard(uri),
+                                      icon: const Icon(Icons.copy, size: 18),
+                                      label: const Text('Copy Link'),
+                                      style: OutlinedButton.styleFrom(
+                                        foregroundColor: buttonBackgroundColor,
+                                        side: BorderSide(color: buttonBackgroundColor),
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
                         ),
                       );
                     },
